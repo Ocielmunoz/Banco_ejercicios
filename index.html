@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenter - Selector de Ejercicios Clínicos</title>
+    <style>
+        /* --- ESTILOS DE LA APLICACIÓN (PANTALLA) --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .app-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding-bottom: 80px; 
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; color: #34495e; }
+        select {
+            width: 100%; padding: 12px; border: 1px solid #bdc3c7;
+            border-radius: 6px; font-size: 16px; cursor: pointer;
+        }
+        #results-container { margin-top: 30px; display: none; }
+        .category-title {
+            color: #2980b9; font-size: 1.2em; border-bottom: 2px solid #3498db;
+            padding-bottom: 5px; margin-top: 25px; margin-bottom: 15px;
+        }
+        .exercise-card {
+            background: #fdfdfd; border-left: 4px solid #3498db; padding: 15px;
+            margin-bottom: 20px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .exercise-header { display: flex; align-items: center; margin-bottom: 5px; }
+        .exercise-checkbox { margin-right: 15px; transform: scale(1.5); cursor: pointer; }
+        .exercise-name { font-weight: 700; font-size: 1.1em; color: #2c3e50; cursor: pointer; margin: 0; }
+        .exercise-mvic { font-size: 0.9em; color: #7f8c8d; font-style: italic; margin-left: 33px; margin-bottom: 10px; }
+        
+        .dosage-input {
+            display: none; margin-left: 33px; margin-bottom: 15px; padding: 8px 12px;
+            border: 1px solid #3498db; border-radius: 4px; width: calc(100% - 60px);
+            font-size: 0.95em; background-color: #f0f8ff;
+        }
+
+        .tags-container { margin-left: 33px; margin-bottom: 12px; }
+        .tag {
+            display: inline-block; padding: 4px 8px; border-radius: 12px;
+            font-size: 0.8em; font-weight: bold; margin-right: 8px; color: white;
+        }
+        
+        /* Colores de etiquetas */
+        .tag-axial { background-color: #f39c12; }
+        .tag-anteroposterior { background-color: #9b59b6; }
+        .tag-lateral { background-color: #34495e; }
+        .tag-estiramiento { background-color: #2ecc71; }
+        .tag-acortamiento { background-color: #e74c3c; }
+        .tag-rotacional { background-color: #16a085; }
+        .tag-bilateral { background-color: #2980b9; }
+        .tag-unilateral { background-color: #8e44ad; }
+        .tag-altacarga { background-color: #c0392b; }
+        .tag-vectorfijo { background-color: #7f8c8d; }
+        .tag-dinamico { background-color: #d35400; }
+        .tag-excentrico { background-color: #ff4757; }
+        .tag-controlmotor { background-color: #f368e0; }
+        .tag-inestable { background-color: #ff9f43; }
+        .tag-anterior { background-color: #0abde3; }
+        .tag-extension { background-color: #10ac84; }
+
+        .exercise-img {
+            max-width: 100%; height: auto; max-height: 220px; object-fit: contain;
+            border-radius: 4px; margin: 0 auto 15px auto; display: block;
+        }
+
+        #generate-pdf-btn {
+            display: none; position: fixed; bottom: 30px; right: 30px;
+            background-color: #27ae60; color: white; border: none; padding: 15px 25px;
+            font-size: 1.1em; font-weight: bold; border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4); cursor: pointer; z-index: 1000;
+        }
+        #generate-pdf-btn:hover { background-color: #219653; transform: scale(1.05); }
+
+        /* --- LA MAGIA: ESTILOS NATIVOS DE IMPRESIÓN --- */
+        #print-container { display: none; }
+
+        @media print {
+            @page { margin: 1.5cm; } 
+            body { background-color: #fff; padding: 0; }
+            .app-container, #generate-pdf-btn { display: none !important; }
+            #print-container { display: block !important; width: 100%; color: black; }
+            .print-exercise { page-break-inside: avoid; margin-bottom: 40px; }
+            .print-exercise img { max-height: 400px; display: block; margin: 0 auto; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <h1>Selector de Ejercicios Clínicos</h1>
+    <div class="form-group">
+        <label for="action-select">Objetivo Biomecánico:</label>
+        <select id="action-select">
+            <option value="">-- Selecciona una acción --</option>
+            <option value="hip_extension">Extensores de Cadera</option>
+            <option value="hip_abduction">Abductores de Cadera</option>
+            <option value="hip_external_rotation">Rotadores Externos de Cadera</option>
+            <option value="knee_extension">Extensores de Rodilla</option>
+            <option value="knee_flexion">Flexores de Rodilla / Isquiotibiales</option>
+            <option value="core_strengthening">Estabilizadores del Tronco (Core)</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="muscle-select">Músculo Específico:</label>
+        <select id="muscle-select" disabled>
+            <option value="">-- Selecciona un músculo --</option>
+        </select>
+    </div>
+    <div id="results-container"></div>
+</div>
+
+<button id="generate-pdf-btn">Imprimir / Generar PDF (<span id="selected-count">0</span>)</button>
+
+<div id="print-container"></div>
+
+<script>
+    const exerciseDatabase = {
+        hip_extension: {
+            name: "Extensores de Cadera",
+            muscles: {
+                gluteus_maximus: {
+                    name: "Glúteo Mayor",
+                    categories: [
+                        {
+                            title: "Mayor Amplitud EMG (Posición Acortada)",
+                            description: "Ejercicios que generan la mayor contracción del glúteo mayor al trabajarlo en su posición más acortada.",
+                            exercises: [
+                                { id: "ex1", name: "Pull-throughs", note: "Bisagra de cadera con polea/banda baja.", image: "https://www.shutterstock.com/shutterstock/photos/1960309627/display_1500/stock-vector-woman-doing-cable-pull-throughs-exercise-flat-vector-illustration-isolated-on-white-background-1960309627.jpg", tags: ["Anteroposterior", "Acortamiento"] },
+                                { id: "ex2", name: "Glute bridges", note: "Puente de glúteo en supino.", image: "https://www.boltonarena.com/wp-content/uploads/2025/01/Glute_Bridge-scaled.webp", tags: ["Anteroposterior", "Acortamiento"] },
+                                { id: "ex3", name: "Hip thrusts", note: "Empuje de cadera con espalda apoyada en banco.", image: "https://s3assets.skimble.com/assets/1579364/image_iphone.jpg", tags: ["Anteroposterior", "Acortamiento"] },
+                                { id: "ex4", name: "Horizontal back extensions", note: "Extensión en silla romana/GHD.", image: "https://cdn.shopify.com/s/files/1/0536/1244/5846/files/Back_Extension_480x480.gif?v=1658797890", tags: ["Anteroposterior", "Acortamiento"] }
+                            ]
+                        },
+                        {
+                            title: "Ejercicios > 40% MVIC",
+                            description: "Progresión ordenada de menor a mayor activación electromiográfica.",
+                            exercises: [
+                                { id: "ex5", name: "Sideways lunge", note: "Estocada lateral.", image: "https://modusx.de/wp-content/uploads/side-lunges-seitliche-ausfallschritte-1536x864.jpg", tags: ["Axial", "Estiramiento"] },
+                                { id: "ex6", name: "Lateral step up", note: "Subida lateral al cajón.", image: "https://liftmanual.com/wp-content/uploads/2023/04/lateral-step-up.jpg", tags: ["Axial", "Estiramiento"] },
+                                { id: "ex7", name: "Transverse lunge", note: "Estocada transversal.", image: "https://lyfta.app/images/exercises/16961101.png", tags: ["Axial", "Estiramiento"] },
+                                { id: "ex8", name: "Quadruped with contralateral arm/leg lift", note: "Bird-dog.", image: "https://www.rickysinghmd.com/wp-content/themes/ypo-theme/images/backpain3.jpg", tags: ["Axial", "Acortamiento"] },
+                                { id: "ex9", name: "Unilateral mini-squat", note: "Mini-sentadilla monopodal.", image: "https://i.ytimg.com/vi/9_Ca2YRRdtE/maxresdefault.jpg", tags: ["Axial", "Estiramiento"] },
+                                { id: "ex10", name: "Retro step up", note: "Subida al cajón en retroceso.", image: "https://physiofithealth.com.au/wp-content/uploads/2020/08/RETRO_STEPUP1.png", tags: ["Axial", "Estiramiento"] },
+                                { id: "ex11", name: "Wall squat", note: "Sentadilla isométrica apoyado en pared.", image: "https://media.self.com/photos/62d08fd44adf27f43f076447/master/w_1600%2Cc_limit/Nikki_wall-sit%2520(1).jpg", tags: ["Axial", "Estiramiento"] },
+                                { id: "ex12", name: "Single-limb squat", note: "Sentadilla completa a una pierna.", image: "https://hips.hearstapps.com/hmg-prod/images/gettyimages-946881328-min-1675248475.jpg", tags: ["Axial", "Estiramiento"] },
+                                { id: "ex13", name: "Single-limb deadlift", note: "Peso muerto a una pierna.", image: "https://media1.popsugar-assets.com/files/thumbor/qwl33XZlEYzhjMY7cT3zv2Czgmg=/fit-in/792x613/top/filters:format_auto():upscale()/2016/03/02/030/n/1922398/77bb8ac0c6000ed8_Single-Leg-Deadlift-Kettlebell.jpg", tags: ["Anteroposterior", "Estiramiento"] },
+                                { id: "ex14", name: "Forward step up", note: "Subida frontal al cajón.", image: "https://samarpanphysioclinic.com/wp-content/uploads/2022/12/Step-Up-with-Leg-Raise.webp", tags: ["Axial", "Estiramiento"] }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        hip_abduction: {
+            name: "Abductores de Cadera",
+            muscles: {
+                gluteus_medius: {
+                    name: "Complejo Glúteo Medio / Menor",
+                    categories: [
+                        {
+                            title: "Ejercicios > 40% MVIC",
+                            description: "Progresión ordenada desde menor a mayor activación (MVIC) según la evidencia clínica.",
+                            exercises: [
+                                { id: "ex15", name: "Lateral step up", note: "Subida lateral al cajón.", image: "https://liftmanual.com/wp-content/uploads/2023/04/lateral-step-up.jpg", tags: ["Axial"] },
+                                { id: "ex16", name: "Quadruped with contralateral arm/leg lift", note: "Bird-dog. Elevación contralateral en cuadrupedia.", image: "https://www.rickysinghmd.com/wp-content/themes/ypo-theme/images/backpain3.jpg", tags: ["Axial"] },
+                                { id: "ex17", name: "Forward step up", note: "Subida frontal al cajón.", image: "https://samarpanphysioclinic.com/wp-content/uploads/2022/12/Step-Up-with-Leg-Raise.webp", tags: ["Axial"] },
+                                { id: "ex18", name: "Unilateral bridge", note: "Puente de glúteo a una pierna.", image: "https://fitnessprogramer.com/wp-content/uploads/2022/02/Unilateral-Bridge.gif", tags: ["Anteroposterior"] },
+                                { id: "ex19", name: "Transverse lunge", note: "Estocada transversal.", image: "https://lyfta.app/images/exercises/16961101.png", tags: ["Axial"] },
+                                { id: "ex20", name: "Wall squat", note: "Sentadilla isométrica en pared.", image: "https://media.self.com/photos/62d08fd44adf27f43f076447/master/w_1600%2Cc_limit/Nikki_wall-sit%2520(1).jpg", tags: ["Axial"] },
+                                { id: "ex21", name: "Side-bridge to neutral spine", note: "Plancha lateral hasta posición neutra.", image: "https://post.healthline.com/wp-content/uploads/2020/12/plank-side-bridge-female-1200x628-facebook-1200x628.jpg", tags: ["Lateral", "Isométrico"] },
+                                { id: "ex22", name: "Standing erect pelvic drop", note: "Caída y elevación pélvica de pie (Pelvic drop/hike).", image: "https://i.ytimg.com/vi/bYw9_E_9lXY/maxresdefault.jpg", tags: ["Lateral"] },
+                                { id: "ex23", name: "Single-limb deadlift", note: "Peso muerto a una pierna.", image: "https://media1.popsugar-assets.com/files/thumbor/qwl33XZlEYzhjMY7cT3zv2Czgmg=/fit-in/792x613/top/filters:format_auto():upscale()/2016/03/02/030/n/1922398/77bb8ac0c6000ed8_Single-Leg-Deadlift-Kettlebell.jpg", tags: ["Anteroposterior"] },
+                                { id: "ex24", name: "Single-limb squat", note: "Sentadilla completa a una pierna.", image: "https://hips.hearstapps.com/hmg-prod/images/gettyimages-946881328-min-1675248475.jpg", tags: ["Axial"] },
+                                { id: "ex25", name: "Side-bridge with hip abduction", note: "Plancha lateral combinada con abducción de cadera superior.", image: "https://barbend.com/wp-content/uploads/2023/07/Copenhagen-plank-form.jpg", tags: ["Lateral", "Alta Activación"] },
+                                { id: "ex26", name: "Side-lying hip abduction", note: "Abducción de cadera acostado de lado. Posición de máxima activación para glúteo medio.", image: "https://www.verywellhealth.com/thmb/pXQk5G2g36o-b3Z3P5VqB8aJm1g=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/Verywell-28-2696614-SideLyingHipAbduction01-2092-2cc351ab66ed4c2f883f3e1bf5c8ce63.jpg", tags: ["Lateral", "Alta Activación"] }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        hip_external_rotation: {
+            name: "Rotadores Externos de Cadera",
+            muscles: {
+                pelvitrochanteric: {
+                    name: "Pelvitrocantéreos / Fibras Posteriores",
+                    categories: [
+                        {
+                            title: "Aislamiento y Activación Específica",
+                            description: "Ejercicios orientados a la activación directa de los rotadores externos profundos.",
+                            exercises: [
+                                { id: "ex27", name: "Clamshell exercise against resistance", note: "Apertura de cadera (almeja) con banda elástica de resistencia.", image: "https://media.post.rvohealth.io/wp-content/uploads/sites/2/2020/05/GRT-clamshell-exercise-1296x728-header-1.jpg", tags: ["Rotacional", "Lateral"] },
+                                { id: "ex28", name: "Seated external rotation against pulley", note: "Rotación externa sentado utilizando polea o banda elástica.", image: "https://i.ytimg.com/vi/qPqV19nQcW0/maxresdefault.jpg", tags: ["Rotacional", "Axial"] }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        knee_extension: {
+            name: "Extensores de Rodilla",
+            muscles: {
+                quadriceps: {
+                    name: "Cuádriceps",
+                    categories: [
+                        {
+                            title: "Ejercicios Dominantes de Rodilla",
+                            description: "Ejercicios principales para el desarrollo de la fuerza, control y tolerancia a la carga del aparato extensor.",
+                            exercises: [
+                                { id: "ex29", name: "Squats", note: "Sentadilla libre. El ángulo de rodilla y la posición de la cadera reclutarán selectivamente diferentes vientres musculares.", image: "https://hips.hearstapps.com/hmg-prod/images/squat-workout-1440062494.jpg", tags: ["Axial", "Bilateral"] },
+                                { id: "ex30", name: "Back squats", note: "Sentadilla trasera con barra. Ideal para maximizar la carga sistémica global.", image: "https://www.verywellfit.com/thmb/x2N_M8nFqE6yIIfQOqY_l2U1Gv4=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/13-BarbellBackSquat-56faffeb3df78cea8883656e.jpg", tags: ["Axial", "Alta Carga", "Bilateral"] },
+                                { id: "ex31", name: "Split squats", note: "Sentadilla asimétrica. Mayor demanda estabilizadora y trabajo dominante sobre la pierna adelantada.", image: "https://barbend.com/wp-content/uploads/2021/04/Barbell-Split-Squat.jpg", tags: ["Axial", "Unilateral"] },
+                                { id: "ex32", name: "Single-leg press", note: "Prensa de piernas a una pierna. Elimina la demanda de estabilidad del core para aislar la fuerza periférica del cuádriceps.", image: "https://www.strengthlog.com/wp-content/uploads/2020/03/Leg-Press-Single-Leg.gif", tags: ["Vector Fijo", "Unilateral"] },
+                                { id: "ex33", name: "Lunges", note: "Estocadas o zancadas. Trabajo que suma un componente dinámico y alta demanda excéntrica en la fase de frenado.", image: "https://media1.popsugar-assets.com/files/thumbor/k1Zf1WbQ2yWfDrtuR8z9_i1tTjA=/fit-in/792x528/filters:format_auto():upscale()/2018/02/06/918/n/1922729/7f194c505a7a1b80dbfa98.81439757_edit_img_image_1090627_1517947730.jpg", tags: ["Axial", "Dinámico", "Unilateral"] }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        knee_flexion: {
+            name: "Flexores de Rodilla / Isquiotibiales",
+            muscles: {
+                hamstrings: {
+                    name: "Isquiotibiales",
+                    categories: [
+                        {
+                            title: "Ejercicios Sugeridos para Isquiotibiales",
+                            description: "Ejercicios con alta activación y enfoque en hipertrofia mediada por estiramiento y sobrecarga excéntrica.",
+                            exercises: [
+                                { id: "ex34", name: "Single-leg deadlifts", note: "Peso muerto a una pierna. Fuerte énfasis en el estiramiento del isquiotibial y control pélvico rotacional.", image: "https://media1.popsugar-assets.com/files/thumbor/qwl33XZlEYzhjMY7cT3zv2Czgmg=/fit-in/792x613/top/filters:format_auto():upscale()/2016/03/02/030/n/1922398/77bb8ac0c6000ed8_Single-Leg-Deadlift-Kettlebell.jpg", tags: ["Anteroposterior", "Estiramiento", "Unilateral"] },
+                                { id: "ex35", name: "Slide leg curl", note: "Curl de isquiotibiales deslizante. Trabaja la co-contracción de glúteo e isquios en cadena cerrada.", image: "https://post.healthline.com/wp-content/uploads/2020/08/woman-doing-slider-leg-curl-on-yoga-mat-732x549-thumbnail.jpg", tags: ["Acortamiento", "Dinámico", "Bilateral"] },
+                                { id: "ex36", name: "Good mornings", note: "Buenos días con carga (mínimo 25% del peso corporal). Potente hipertrofia mediada por estiramiento profundo.", image: "https://barbend.com/wp-content/uploads/2021/04/Barbell-Good-Morning.jpg", tags: ["Axial", "Estiramiento", "Alta Carga"] },
+                                { id: "ex37", name: "Nordic hamstring exercise", note: "Curl nórdico. Altísima demanda excéntrica, el estándar de oro para la prevención de desgarros.", image: "https://www.strengthlog.com/wp-content/uploads/2020/11/Nordic-Hamstring-Curl.gif", tags: ["Excéntrico", "Alta Carga", "Bilateral"] },
+                                { id: "ex38", name: "Eccentric leg curls", note: "Curl de piernas en máquina con énfasis en la fase excéntrica (bajada lenta y controlada).", image: "https://liftmanual.com/wp-content/uploads/2023/04/lying-leg-curl.jpg", tags: ["Excéntrico", "Vector Fijo"] }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        // NUEVA SECCIÓN: CORE
+        core_strengthening: {
+            name: "Estabilizadores del Tronco (Core)",
+            muscles: {
+                core_complex: {
+                    name: "Complejo Core y Estabilizadores",
+                    categories: [
+                        {
+                            title: "Fuerza Global y Estabilidad (>45% MVIC)",
+                            description: "Ejercicios efectivos para aumentar la fuerza global del core mediante gran activación simultánea.",
+                            exercises: [
+                                { id: "ex39", name: "Side bridge", note: "Plancha lateral. Óptima activación para el core global y abdominales inferiores.", image: "https://post.healthline.com/wp-content/uploads/2020/12/plank-side-bridge-female-1200x628-facebook-1200x628.jpg", tags: ["Isométrico", "Lateral"] },
+                                { id: "ex40", name: "Lateral step up", note: "Subida lateral al cajón. Demanda alta estabilización lumbo-pélvica en carga.", image: "https://liftmanual.com/wp-content/uploads/2023/04/lateral-step-up.jpg", tags: ["Axial", "Dinámico"] },
+                                { id: "ex41", name: "Lunge", note: "Estocada. Excelente transferencia funcional y reclutamiento del core en dinámica.", image: "https://media1.popsugar-assets.com/files/thumbor/k1Zf1WbQ2yWfDrtuR8z9_i1tTjA=/fit-in/792x528/filters:format_auto():upscale()/2018/02/06/918/n/1922729/7f194c505a7a1b80dbfa98.81439757_edit_img_image_1090627_1517947730.jpg", tags: ["Axial", "Dinámico"] },
+                                { id: "ex42", name: "Quadruped with arm/leg lift", note: "Bird-dog. Efectivo para la fuerza global y activa fuertemente la cadena cruzada posterior.", image: "https://www.rickysinghmd.com/wp-content/themes/ypo-theme/images/backpain3.jpg", tags: ["Axial", "Control Motor"] }
+                            ]
+                        },
+                        {
+                            title: "Estabilizadores Posteriores (Erectores y Multífidos)",
+                            description: "Mayor activación del longísimo torácico y multífido lumbar.",
+                            exercises: [
+                                { id: "ex43", name: "Superman exercise", note: "Produce la mayor activación registrada de los estabilizadores extensores de la espalda.", image: "https://raw.githubusercontent.com/Ocielmunoz/Banco_ejercicios/main/assets/img/superman.jpg", tags: ["Extensión", "Isométrico"] },
+                                { id: "ex44", name: "Bridging", note: "Puente glúteo bilateral. Excelente co-activación de la cadena posterior y multífidos lumbares.", image: "https://www.boltonarena.com/wp-content/uploads/2025/01/Glute_Bridge-scaled.webp", tags: ["Anteroposterior", "Bilateral"] },
+                                { id: "ex45", name: "Unilateral bridging", note: "Puente a una pierna. Aumenta drásticamente la demanda rotacional sobre los estabilizadores.", image: "https://fitnessprogramer.com/wp-content/uploads/2022/02/Unilateral-Bridge.gif", tags: ["Anteroposterior", "Unilateral"] }
+                            ]
+                        },
+                        {
+                            title: "Complejo Anterolateral y Recto Abdominal",
+                            description: "Máxima activación del oblicuo externo y recto del abdomen.",
+                            exercises: [
+                                { id: "ex46", name: "Prone bridging (Plank)", note: "Plancha frontal. Gran activación de oblicuos externos y recto abdominal para resistir la extensión.", image: "https://post.healthline.com/wp-content/uploads/2020/12/plank-female-1200x628-facebook-1200x628.jpg", tags: ["Anterior", "Isométrico"] },
+                                { id: "ex47", name: "Curl up on unstable surface", note: "Crunch sobre superficie inestable (Ej: BOSU). Alcanza la mayor actividad del recto abdominal (~50% MVIC).", image: "https://www.verywellfit.com/thmb/B9O_b-HjQ-hU_QyvS8pW0-14Wxw=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/Bosu_Ball_Crunch-5c86801846e0fb0001095d30.jpg", tags: ["Anterior", "Inestable", "Dinámico"] }
+                            ]
+                        },
+                        {
+                            title: "Activación Profunda (Transverso del Abdomen)",
+                            description: "Ejercicios de baja carga enfocados en el aprendizaje motor y control específico.",
+                            exercises: [
+                                { id: "ex48", name: "Prone plank with contralateral arm/leg lift", note: "Plancha frontal con elevación de brazo/pierna opuestos. Mayor activación del transverso (≤50% MVIC) ideal para control motor.", image: "https://media.istockphoto.com/id/1199320290/photo/fit-woman-doing-bird-dog-plank-exercise-fitness-girl-working-out-at-home-or-gym.jpg?s=612x612&w=0&k=20&c=N_iEaOaP_22_3yq8tK-a-eH_aA_p5-0v79b9z_q8g20=", tags: ["Control Motor", "Inestable", "Isométrico"] }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    };
+
+    let selectedExercises = {};
+    const actionSelect = document.getElementById('action-select');
+    const muscleSelect = document.getElementById('muscle-select');
+    const resultsContainer = document.getElementById('results-container');
+    const generatePdfBtn = document.getElementById('generate-pdf-btn');
+    const selectedCountSpan = document.getElementById('selected-count');
+
+    function getTagClass(tag) {
+        if (tag === "Axial") return "tag-axial";
+        if (tag === "Anteroposterior") return "tag-anteroposterior";
+        if (tag === "Lateral") return "tag-lateral";
+        if (tag === "Estiramiento" || tag === "Isométrico") return "tag-estiramiento";
+        if (tag === "Acortamiento" || tag === "Alta Activación") return "tag-acortamiento";
+        if (tag === "Rotacional") return "tag-rotacional";
+        if (tag === "Bilateral") return "tag-bilateral";
+        if (tag === "Unilateral") return "tag-unilateral";
+        if (tag === "Alta Carga") return "tag-altacarga";
+        if (tag === "Vector Fijo") return "tag-vectorfijo";
+        if (tag === "Dinámico") return "tag-dinamico";
+        if (tag === "Excéntrico") return "tag-excentrico";
+        if (tag === "Control Motor") return "tag-controlmotor";
+        if (tag === "Inestable") return "tag-inestable";
+        if (tag === "Anterior") return "tag-anterior";
+        if (tag === "Extensión") return "tag-extension";
+        return "";
+    }
+
+    actionSelect.addEventListener('change', function() {
+        const action = this.value;
+        muscleSelect.innerHTML = '<option value="">-- Selecciona un músculo --</option>';
+        resultsContainer.style.display = 'none';
+        
+        if (action && exerciseDatabase[action]) {
+            muscleSelect.disabled = false;
+            for (const key in exerciseDatabase[action].muscles) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = exerciseDatabase[action].muscles[key].name;
+                muscleSelect.appendChild(option);
+            }
+        } else {
+            muscleSelect.disabled = true;
+        }
+    });
+
+    muscleSelect.addEventListener('change', function() {
+        if (actionSelect.value && this.value) {
+            renderExercises(actionSelect.value, this.value);
+        } else {
+            resultsContainer.style.display = 'none';
+        }
+    });
+
+    function renderExercises(action, muscle) {
+        const data = exerciseDatabase[action].muscles[muscle];
+        let html = `<h2>Ejercicios Sugeridos para: ${data.name}</h2>`;
+
+        data.categories.forEach(cat => {
+            html += `<div class="category-title">${cat.title}</div><p style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 15px;">${cat.description}</p>`;
+            cat.exercises.forEach(ex => {
+                const isChecked = selectedExercises[ex.id] ? 'checked' : '';
+                const currentDosage = selectedExercises[ex.id] ? selectedExercises[ex.id].dosage : '';
+                const displayDosage = isChecked ? 'block' : 'none';
+
+                let tagsHtml = ex.tags ? `<div class="tags-container">${ex.tags.map(t => `<span class="tag ${getTagClass(t)}">${t}</span>`).join('')}</div>` : '';
+                let imgHtml = ex.image ? `<img src="${ex.image}" class="exercise-img">` : '';
+
+                html += `
+                    <div class="exercise-card">
+                        <div class="exercise-header">
+                            <input type="checkbox" class="exercise-checkbox" id="chk-${ex.id}" data-id="${ex.id}" data-name="${ex.name}" data-note="${ex.note}" data-image="${ex.image}" ${isChecked}>
+                            <label for="chk-${ex.id}" class="exercise-name">${ex.name}</label>
+                        </div>
+                        <input type="text" id="dos-${ex.id}" class="dosage-input" placeholder="Indicaciones (Ej: 3 series x 12 repeticiones)" style="display: ${displayDosage};" value="${currentDosage}">
+                        <div class="exercise-mvic">${ex.note}</div>
+                        ${tagsHtml}${imgHtml}
+                    </div>`;
+            });
+        });
+
+        resultsContainer.innerHTML = html;
+        resultsContainer.style.display = 'block';
+
+        document.querySelectorAll('.exercise-checkbox').forEach(chk => {
+            chk.addEventListener('change', function() {
+                const dosInput = document.getElementById(`dos-${this.dataset.id}`);
+                if (this.checked) {
+                    dosInput.style.display = 'block';
+                    selectedExercises[this.dataset.id] = { 
+                        name: this.dataset.name, 
+                        note: this.dataset.note, 
+                        image: this.dataset.image,
+                        dosage: dosInput.value
+                    };
+                } else {
+                    dosInput.style.display = 'none';
+                    delete selectedExercises[this.dataset.id];
+                }
+                updatePdfButton();
+            });
+        });
+
+        document.querySelectorAll('.dosage-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const exId = this.id.replace('dos-', '');
+                if (selectedExercises[exId]) {
+                    selectedExercises[exId].dosage = this.value;
+                }
+            });
+        });
+    }
+
+    function updatePdfButton() {
+        const count = Object.keys(selectedExercises).length;
+        selectedCountSpan.textContent = count;
+        generatePdfBtn.style.display = count > 0 ? 'block' : 'none';
+    }
+
+    // GENERADOR NATIVO
+    generatePdfBtn.addEventListener('click', function() {
+        const printContainer = document.getElementById('print-container');
+        
+        let pdfHtml = `
+            <div style="text-align: center; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 10px;">
+                <h1 style="margin: 0; font-size: 28px; color: #2c3e50;">Pauta de Ejercicios</h1>
+                <p style="margin-top: 5px; font-size: 18px; color: #7f8c8d;">Zenter - Prescripción Clínica</p>
+            </div>
+        `;
+
+        Object.values(selectedExercises).forEach(ex => {
+            const dosageHtml = ex.dosage ? `<p style="font-weight: bold; margin-bottom: 10px; font-size: 18px; color: #e74c3c;">Dosificación: ${ex.dosage}</p>` : '';
+            
+            pdfHtml += `
+                <div class="print-exercise">
+                    <h2 style="margin-bottom: 10px; color: #2c3e50;">${ex.name}</h2>
+                    ${dosageHtml}
+                    <p style="font-style: italic; margin-bottom: 20px; font-size: 16px; color: #555;">${ex.note}</p>
+                    ${ex.image && ex.image !== 'undefined' ? `<img src="${ex.image}" alt="${ex.name}">` : ''}
+                </div><hr style="border: 0; border-top: 1px dashed #ccc; margin: 30px 0;">`;
+        });
+
+        printContainer.innerHTML = pdfHtml;
+
+        setTimeout(() => {
+            window.print();
+        }, 500);
+    });
+</script>
+
+</body>
+</html>
